@@ -25,6 +25,12 @@ NRF24L01pNetwork::~NRF24L01pNetwork() {
 void NRF24L01pNetwork::initNetwork(uint16_t networkId, uint16_t nodeId){
     ownNodeId = networkId;
     ownNetworkId = nodeId;
+    
+    int i;
+    for(i=1;i<6;i++){
+        RxPipeConfig[i].address = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(ownNodeId)<<8) + (uint64_t)(0xC0+i);;
+        set_RX_pipe_address((pipe_t)i,RxPipeConfig[i].address);
+    }
 }
 void NRF24L01pNetwork::setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, pipe_t AdjNodeRxPipe){
     if((AssignedPipe>= PIPE_P1)&&(AssignedPipe <= PIPE_P5)){
@@ -39,6 +45,5 @@ void NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode
         payload.address = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(AdjNode->nodeId)<<8) + (uint64_t)(0xC0+AdjNode->rxPipe);
         memcpy(payload.data, NetPayload, 32);
         payload.length = 32;
-        TransmitPayload(&payload);
-        
+        TransmitPayload(&payload);     
 }
