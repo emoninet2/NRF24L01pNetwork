@@ -14,6 +14,13 @@
 #ifndef NRF24L01PNETWORK_H
 #define NRF24L01PNETWORK_H
 
+#include <inttypes.h>
+#include <stdint.h>
+#include <limits>
+#include <stdio.h>
+#include <string.h>
+#include <cstdlib>
+
 #include "NRF24L01p/NRF24L01p.h"
 #include "NRF24L01pNetworkConfig.h"
 
