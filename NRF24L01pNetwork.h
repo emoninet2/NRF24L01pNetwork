@@ -35,6 +35,7 @@ public:
         uint16_t destNodeId;
         uint8_t pid;
         uint8_t packetInfo;
+        uint8_t length;
         uint8_t *payload;
     }networkPayload_t;
     

@@ -41,11 +41,12 @@ void NRF24L01pNetwork::setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, 
 }
 
 void NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode){
+        uint8_t payloadData[32];
         Payload_t payload;
+        payload.data = payloadData;
         payload.address = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(AdjNode->nodeId)<<8) + (uint64_t)(0xC0+AdjNode->rxPipe);
-        printf("own network ID : %x\r\n", ownNetworkId);
-        printf("sending to %llx\r\n", payload.address);
-        memcpy(payload.data, NetPayload, 32);
-        payload.length = 32;
+        memcpy(payload.data, NetPayload, 7);
+        memcpy(&payload.data[7], NetPayload->payload, NetPayload->length);
+        payload.length = NetPayload->length + 7;
         TransmitPayload(&payload);     
 }
