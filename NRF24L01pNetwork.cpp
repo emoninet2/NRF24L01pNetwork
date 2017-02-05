@@ -50,3 +50,16 @@ void NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode
         payload.length = NetPayload->length + 7;
         TransmitPayload(&payload);     
 }
+
+void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
+    networkPayload_t *network_pld = (networkPayload_t*) payload->data;
+
+    printf("DATA P%d, LENGTH %d: \r\n", payload->pipe, payload->length);
+    int i;
+    for(i=0;i<32;i++){
+        if(i%8 == 0) printf("\r\n");
+        printf("%x\t", payload->data[i]);  
+    }
+    printf("\r\n\r\n");
+    
+}

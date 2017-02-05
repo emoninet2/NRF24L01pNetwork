@@ -58,7 +58,7 @@ public:
     void initNetwork(uint16_t networkId, uint16_t nodeId);
     void setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, pipe_t AdjNodeRxPipe);
     void sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode);
-    
+    void processNetworkPayload(Payload_t *payload);
 private:
 
 };
