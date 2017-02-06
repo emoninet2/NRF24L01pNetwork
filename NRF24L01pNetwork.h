@@ -61,7 +61,7 @@ public:
     void sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode);
     void processNetworkPayload(Payload_t *payload);
     void sendToNetwork(networkPayload_t *NetPayload);
-    void forwardPacket(networkPayload_t *payload);
+    void forwardPacket(Payload_t *payload);
     void routingTableUpdate(Payload_t *payload);
 private:
 
