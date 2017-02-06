@@ -54,11 +54,15 @@ public:
     uint16_t ownNetworkId;
     adjacentNode_t  AdjNode[5];
     routingNode_t     RoutingTable[20];
+    unsigned int RoutingTableAddr;
     
     void initNetwork(uint16_t networkId, uint16_t nodeId);
     void setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, pipe_t AdjNodeRxPipe);
     void sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode);
     void processNetworkPayload(Payload_t *payload);
+    void sendToNetwork(networkPayload_t *NetPayload);
+    void forwardPacket(networkPayload_t *payload);
+    void routingTableUpdate(Payload_t *payload);
 private:
 
 };
