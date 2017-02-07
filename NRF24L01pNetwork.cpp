@@ -122,11 +122,44 @@ void NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
     memcpy(&NetPayload, Payload->data, 7);
     NetPayload.payload = &Payload->data[7];
     
+
     adjacentNode_t viaNode;
     viaNode.nodeId = AdjNode[Payload->pipe - 1].nodeId;
     viaNode.rxPipe = AdjNode[Payload->pipe - 1].rxPipe;
     
-    sendToAdjacent(&NetPayload, &viaNode);
+    
+    //checking in Destination node is adjacent
+    int i;
+    for(i=0;i<5;i++){
+        if((NetPayload.destNodeId == AdjNode[i].nodeId)&&(NetPayload.destNodeId != viaNode.nodeId)  ){
+            printf("destination is adjacent node : %x\r\n",AdjNode[i].nodeId);
+            sendToAdjacent(&NetPayload, &AdjNode[i]);
+            return;
+        }
+    }
+    
+    //checking if destination node is on Routing Table
+    for(i=0;i<20;i++){
+        if((NetPayload.destNodeId == RoutingTable[i].destNodeId)){
+            printf("on routing table\r\n");
+            sendToAdjacent(&NetPayload, &RoutingTable[i].viaAdjNode);
+            return;
+        }
+    }
+    
+    //forwarding to all adjacent nodes
+    printf("forwarding to all adjacent\r\n");
+    for(i=0;i<5;i++){
+        if((AdjNode[i].status != 0)&&(AdjNode[i].nodeId != viaNode.nodeId)){
+            sendToAdjacent(&NetPayload, &AdjNode[i]);
+            return;
+        }
+    }
+    
+    
+    
+    //printf("forwarding data is : %s to node : %x\r\n", NetPayload.payload, viaNode.nodeId);
+    //sendToAdjacent(&NetPayload, &viaNode);
 
 }
 
