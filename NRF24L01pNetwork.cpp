@@ -115,13 +115,18 @@ void NRF24L01pNetwork::sendToNetwork(networkPayload_t *NetPayload){
 }
 
 void NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
-    networkPayload_t *NetPayload = (networkPayload_t*) Payload->data;
-    Payload_t FwrdPayload;
+    //networkPayload_t *NetPayload = (networkPayload_t*) Payload->data;
+    //NetPayload->payload = &Payload->data[7];
+    
+    networkPayload_t NetPayload;
+    memcpy(&NetPayload, Payload->data, 7);
+    NetPayload.payload = &Payload->data[7];
+    
     adjacentNode_t viaNode;
     viaNode.nodeId = AdjNode[Payload->pipe - 1].nodeId;
     viaNode.rxPipe = AdjNode[Payload->pipe - 1].rxPipe;
     
-    sendToAdjacent(NetPayload, &viaNode);
+    sendToAdjacent(&NetPayload, &viaNode);
 
 }
 
