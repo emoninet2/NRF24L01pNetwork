@@ -58,10 +58,10 @@ public:
     
     void initNetwork(uint16_t networkId, uint16_t nodeId);
     void setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, pipe_t AdjNodeRxPipe);
-    void sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode);
+    int sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode);
     void processNetworkPayload(Payload_t *payload);
-    void sendToNetwork(networkPayload_t *NetPayload);
-    void forwardPacket(Payload_t *payload);
+    int sendToNetwork(networkPayload_t *NetPayload);
+    int forwardPacket(Payload_t *payload);
     void routingTableUpdate(Payload_t *payload);
     void sendAcknowledgement(Payload_t *payload);
 private:

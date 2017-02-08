@@ -41,7 +41,7 @@ void NRF24L01pNetwork::setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, 
     }
 }
 
-void NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode){
+int NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode){
         uint8_t payloadData[32];
         Payload_t payload;
         payload.UseAck = 1;
@@ -51,7 +51,7 @@ void NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode
         memcpy(payload.data, NetPayload, 7);
         memcpy(&payload.data[7], NetPayload->payload, NetPayload->length);
         payload.length = NetPayload->length + 7;
-        TransmitPayload(&payload);   
+        return TransmitPayload(&payload);   
 
 }
 
@@ -84,15 +84,14 @@ void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
         forwardPacket(payload);
     }
 }
-void NRF24L01pNetwork::sendToNetwork(networkPayload_t *NetPayload){
+int NRF24L01pNetwork::sendToNetwork(networkPayload_t *NetPayload){
     
     //checking in Destination node is adjacent
     int i;
     for(i=0;i<5;i++){
         if(NetPayload->destNodeId == AdjNode[i].nodeId){
             printf("destination is adjacent node : %x\r\n",AdjNode[i].nodeId);
-            sendToAdjacent(NetPayload, &AdjNode[i]);
-            return;
+            return sendToAdjacent(NetPayload, &AdjNode[i]);
         }
     }
     
@@ -100,8 +99,7 @@ void NRF24L01pNetwork::sendToNetwork(networkPayload_t *NetPayload){
     for(i=0;i<20;i++){
         if((NetPayload->destNodeId == RoutingTable[i].destNodeId)){
             printf("on routing table\r\n");
-            sendToAdjacent(NetPayload, &RoutingTable[i].viaAdjNode);
-            return;
+            return sendToAdjacent(NetPayload, &RoutingTable[i].viaAdjNode);
         }
     }
     
@@ -109,13 +107,12 @@ void NRF24L01pNetwork::sendToNetwork(networkPayload_t *NetPayload){
     printf("forwarding to all adjacent\r\n");
     for(i=0;i<5;i++){
         if(AdjNode[i].status != 0){
-            sendToAdjacent(NetPayload, &AdjNode[i]);
-            return;
+            return sendToAdjacent(NetPayload, &AdjNode[i]);
         }
     }
 }
 
-void NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
+int NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
     //networkPayload_t *NetPayload = (networkPayload_t*) Payload->data;
     //NetPayload->payload = &Payload->data[7];
     
@@ -134,8 +131,7 @@ void NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
     for(i=0;i<5;i++){
         if((NetPayload.destNodeId == AdjNode[i].nodeId)&&(NetPayload.destNodeId != viaNode.nodeId)  ){
             printf("destination is adjacent node : %x\r\n",AdjNode[i].nodeId);
-            sendToAdjacent(&NetPayload, &AdjNode[i]);
-            return;
+            return sendToAdjacent(&NetPayload, &AdjNode[i]);
         }
     }
     
@@ -143,8 +139,7 @@ void NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
     for(i=0;i<20;i++){
         if((NetPayload.destNodeId == RoutingTable[i].destNodeId)){
             printf("on routing table\r\n");
-            sendToAdjacent(&NetPayload, &RoutingTable[i].viaAdjNode);
-            return;
+            return sendToAdjacent(&NetPayload, &RoutingTable[i].viaAdjNode);
         }
     }
     
@@ -152,8 +147,7 @@ void NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
     printf("forwarding to all adjacent\r\n");
     for(i=0;i<5;i++){
         if((AdjNode[i].status != 0)&&(AdjNode[i].nodeId != viaNode.nodeId)){
-            sendToAdjacent(&NetPayload, &AdjNode[i]);
-            return;
+            return sendToAdjacent(&NetPayload, &AdjNode[i]);
         }
     }
     
