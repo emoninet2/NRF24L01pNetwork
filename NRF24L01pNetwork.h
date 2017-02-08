@@ -63,6 +63,7 @@ public:
     void sendToNetwork(networkPayload_t *NetPayload);
     void forwardPacket(Payload_t *payload);
     void routingTableUpdate(Payload_t *payload);
+    void sendAcknowledgement(Payload_t *payload);
 private:
 
 };

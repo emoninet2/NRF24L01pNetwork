@@ -58,6 +58,7 @@ void NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode
 void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
     networkPayload_t *network_pld = (networkPayload_t*) payload->data;
 
+
     printf("DATA P%d, LENGTH %d: \r\n", payload->pipe, payload->length);
     int i;
     for(i=0;i<32;i++){
@@ -71,12 +72,12 @@ void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
     printf("Packet Info : %x\r\n", network_pld->packetInfo);
     printf("Length : %x\r\n", network_pld->length);
     
-    
-    
+    printf("PID : %x\r\n", network_pld->pid);
     routingTableUpdate(payload);
     
     if(network_pld->destNodeId == ownNodeId){
         printf("packet destination matched own ID\r\n");
+        sendAcknowledgement(payload);
     }
     else{
         printf("forwarding packet\r\n");
@@ -194,4 +195,27 @@ void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
         //printf("\t\t%x --> [%x:%d]\r\n",RoutingTable[i].NodeId,RoutingTable[i].FwrdAdjNode.NodeId,RoutingTable[i].FwrdAdjNode.RxPipe  );
     }
     
+}
+
+
+void NRF24L01pNetwork::sendAcknowledgement(Payload_t *payload){
+    
+    networkPayload_t *NetPayload = (networkPayload_t*) payload->data;
+    
+    
+    uint8_t NetData[25];
+    if(NetPayload->packetInfo&(1<<0)){
+        //printf("\r\tSENDING ACKNOWLEDGEMENT\r\n");
+        networkPayload_t AckPayload;
+        AckPayload.destNodeId = NetPayload->srcNodeId;
+        AckPayload.srcNodeId = ownNodeId;
+        AckPayload.pid = NetPayload->pid;
+        AckPayload.packetInfo = (NetPayload->packetInfo)&0b11111110;
+        AckPayload.payload = NetData;
+        sprintf((char*) AckPayload.payload, "ACK");
+
+        sendToNetwork(&AckPayload);
+        printf("ACK sent\r\n");
+    }
+
 }
