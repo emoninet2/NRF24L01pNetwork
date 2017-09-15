@@ -76,11 +76,11 @@ int NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_
         Payload_t payload;     
         uint8_t payloadData[32];
         payload.UseAck = 1;
-        payload.retransmitCount = 5;
-        payload.address = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(AdjNode->nodeId)<<8) + (uint64_t)(NODE_PIPE_MASK+AdjNode->rxPipe);
-        memcpy(payload.data, NetPayload, 7);
-        memcpy(&payload.data[7], NetPayload->payload, NetPayload->length);
-        payload.length = NetPayload->length + 7;
+        //payload.SoftRtransmitCount = 5;
+        payload.TxAddress = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(AdjNode->nodeId)<<8) + (uint64_t)(NODE_PIPE_MASK+AdjNode->rxPipe);
+        memcpy(payload.Data, NetPayload, 7);
+        memcpy(&payload.Data[7], NetPayload->payload, NetPayload->length);
+        payload.TxDataLen = NetPayload->length + 7;
         return TransmitPayload(&payload);   
  
 
@@ -88,14 +88,14 @@ int NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_
 }
 
 void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
-    networkPayload_t *network_pld = (networkPayload_t*) payload->data;
+    networkPayload_t *network_pld = (networkPayload_t*) payload->Data;
 
 
-    printf("DATA P%d, LENGTH %d: \r\n", payload->pipe, payload->length);
+    printf("DATA P%d, LENGTH %d: \r\n", payload->RxPipe, payload->RxDataLen);
     int i;
     for(i=0;i<32;i++){
         if(i%8 == 0) printf("\r\n");
-        printf("%x\t", payload->data[i]);  
+        printf("%x\t", payload->Data[i]);  
     }
     printf("\r\n\r\n");
     printf("source NodeID : %x\r\n", network_pld->srcNodeId);
@@ -149,14 +149,14 @@ int NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
     //NetPayload->payload = &Payload->data[7];
     
     networkPayload_t NetPayload;
-    memcpy(&NetPayload, Payload->data, 7);
-    memcpy(NetPayload.payload, Payload->data, 25);
+    memcpy(&NetPayload, Payload->Data, 7);
+    memcpy(NetPayload.payload, Payload->Data, 25);
     //NetPayload.payload = &Payload->data[7];
     
 
     adjacentNode_t viaNode;
-    viaNode.nodeId = AdjNode[Payload->pipe - 1].nodeId;
-    viaNode.rxPipe = AdjNode[Payload->pipe - 1].rxPipe;
+    viaNode.nodeId = AdjNode[Payload->RxPipe - 1].nodeId;
+    viaNode.rxPipe = AdjNode[Payload->RxPipe - 1].rxPipe;
     
     
     //checking in Destination node is adjacent
@@ -194,7 +194,7 @@ int NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
 
 void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
     //printf("\r\tROUTING TABLE HANDLER\r\n");
-    networkPayload_t *NetPayload = (networkPayload_t*) payload->data;
+    networkPayload_t *NetPayload = (networkPayload_t*) payload->Data;
     int i;
     
     for(i=0;i<5;i++){
@@ -212,8 +212,8 @@ void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
     }
     //printf("storing to routing table\r\n");
     RoutingTable[RoutingTableAddr].destNodeId = NetPayload->srcNodeId;
-    RoutingTable[RoutingTableAddr].viaAdjNode.nodeId = AdjNode[payload->pipe-1].nodeId;
-    RoutingTable[RoutingTableAddr].viaAdjNode.rxPipe = AdjNode[payload->pipe-1].rxPipe;
+    RoutingTable[RoutingTableAddr].viaAdjNode.nodeId = AdjNode[payload->RxPipe-1].nodeId;
+    RoutingTable[RoutingTableAddr].viaAdjNode.rxPipe = AdjNode[payload->RxPipe-1].rxPipe;
     RoutingTableAddr++;
     if(RoutingTableAddr>=20) RoutingTableAddr = 0;
     
@@ -227,7 +227,7 @@ void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
 
 void NRF24L01pNetwork::sendAcknowledgement(Payload_t *payload){
     
-    networkPayload_t *NetPayload = (networkPayload_t*) payload->data;
+    networkPayload_t *NetPayload = (networkPayload_t*) payload->Data;
     
     
     uint8_t NetData[25];
@@ -247,9 +247,7 @@ void NRF24L01pNetwork::sendAcknowledgement(Payload_t *payload){
 
 }
 
-void NRF24L01pNetwork::Network_init(){
-    
-}
+
 void NRF24L01pNetwork::setUID(uint32_t uid){
     ownUid = uid;
 }
@@ -303,7 +301,7 @@ int NRF24L01pNetwork::processBroadcastPacket(Payload_t *payload){
     return 0;
 }
 int NRF24L01pNetwork::broadcastPacket(Payload_t *payload){
-    payload->address = NRF24L01P_NETWORK_BROADCAST_ADDR;
+    payload->TxAddress = NRF24L01P_NETWORK_BROADCAST_ADDR;
     int ret = TransmitPayload(payload);
     return ret;   
 }
