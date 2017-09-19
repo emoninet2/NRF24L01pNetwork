@@ -12,6 +12,7 @@
  */
 
 #include "NRF24L01pNetwork.h"
+#include "NRF24L01p/NRF24L01p.h"
 
 NRF24L01pNetwork::NRF24L01pNetwork() {
 }
@@ -78,9 +79,22 @@ int NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_
         payload.UseAck = 1;
         //payload.SoftRtransmitCount = 5;
         payload.TxAddress = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(AdjNode->nodeId)<<8) + (uint64_t)(NODE_PIPE_MASK+AdjNode->rxPipe);
-        memcpy(payload.Data, NetPayload, 7);
-        memcpy(&payload.Data[7], NetPayload->payload, NetPayload->length);
-        payload.TxDataLen = NetPayload->length + 7;
+        
+        
+        
+        
+        packetEncapsulate(&payload, NetPayload);
+        
+        //memcpy(payload.Data, NetPayload, 7);
+        //memcpy(&payload.Data[7], NetPayload->payload, NetPayload->length);
+        
+        
+        
+        
+        payload.length = NetPayload->length + 7;
+        
+        
+        
         return TransmitPayload(&payload);   
  
 
@@ -225,6 +239,16 @@ void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
 }
 
 
+
+void NRF24L01pNetwork::showAllAdjacentNodes(void){
+    
+    
+    for(int i=0;i<5;i++){
+        printf("Adjacent Node[%d]\t%#x\t%d\r\n", i,AdjNode[i].nodeId , AdjNode[i].status);
+    }
+    
+}
+
 void NRF24L01pNetwork::sendAcknowledgement(Payload_t *payload){
     
     networkPayload_t *NetPayload = (networkPayload_t*) payload->Data;
@@ -246,6 +270,42 @@ void NRF24L01pNetwork::sendAcknowledgement(Payload_t *payload){
     }
 
 }
+
+
+
+void NRF24L01pNetwork::packetEncapsulate(Payload_t *payload, networkPayload_t *NetPayload){
+    payload->Data[0] = NetPayload->srcNodeId;
+    payload->Data[1] = NetPayload->srcNodeId>>8;
+    payload->Data[2] = NetPayload->destNodeId;
+    payload->Data[3] = NetPayload->destNodeId>>8;
+    payload->Data[4] = NetPayload->pid;
+    payload->Data[5] = NetPayload->packetInfo;
+    payload->Data[6] = NetPayload->length;
+    
+    
+    int i;
+    for(i=0;i<NetPayload->length;i++){
+        payload->Data[7+i] = NetPayload->payload[i];
+    }
+    
+    
+}
+
+void NRF24L01pNetwork::packetDecapsulate(networkPayload_t *NetPayload , Payload_t *payload){
+    NetPayload->srcNodeId = (payload->Data[1] << 8) | payload->Data[0] ;
+    NetPayload->destNodeId = (payload->Data[3] << 8) | payload->Data[2] ;
+    NetPayload->pid = payload->Data[4];
+    NetPayload->packetInfo = payload->Data[5];
+    NetPayload->length = payload->Data[6];
+    
+    int i;
+    for(i=0;i<NetPayload->length;i++){
+        NetPayload->payload[i] = payload->Data[7+i];
+    }
+    
+}
+
+
 
 
 void NRF24L01pNetwork::setUID(uint32_t uid){

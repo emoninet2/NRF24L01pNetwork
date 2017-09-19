@@ -177,7 +177,25 @@ public:
     void sendAcknowledgement(Payload_t *payload);
 
     
+    /**
+     * 
+     * @param payload
+     * @param NetPayload
+     */
+    void packetEncapsulate(Payload_t *payload, networkPayload_t *NetPayload);
+    /**
+     * 
+     * @param NetPayload
+     * @param payload
+     */
+    void packetDecapsulate(networkPayload_t *NetPayload , Payload_t *payload);
     
+    
+    
+    ////////DEBUGGING////////////
+    
+    
+    void showAllAdjacentNodes(void);
     
     ///////////////DHC functions <tested by needs improvement and further testing> //////////////////////////
     
