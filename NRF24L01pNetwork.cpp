@@ -98,7 +98,7 @@ void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
     
     
 
-    printf("DATA P%d, LENGTH %d: \r\n", payload->RxPipe, payload->RxDataLen);
+    printf("DATA P%d, LENGTH %d: \r\n", payload->RxPipe, payload->length);
     int i;
     for(i=0;i<32;i++){
         if(i%8 == 0) printf("\r\n");
@@ -285,11 +285,11 @@ void NRF24L01pNetwork::packetEncapsulate(Payload_t *payload, networkPayload_t *N
 }
 
 void NRF24L01pNetwork::packetDecapsulate(networkPayload_t *NetPayload , Payload_t *payload){
-    NetPayload->srcNodeId = (payload->Data[1] << 8) | payload->Data[0] ;
-    NetPayload->destNodeId = (payload->Data[3] << 8) | payload->Data[2] ;
-    NetPayload->pid = payload->Data[4];
-    NetPayload->packetInfo = payload->Data[5];
-    NetPayload->length = payload->Data[6];
+    NetPayload->srcNodeId = ((payload->Data[1] << 8) | payload->Data[0])&0xFF ;
+    NetPayload->destNodeId = ((payload->Data[3] << 8) | payload->Data[2])&0xFF ;
+    NetPayload->pid = payload->Data[4] &0xFF;
+    NetPayload->packetInfo = payload->Data[5] &0xFF;
+    NetPayload->length = payload->Data[6] &0xFF;
     
     int i;
     for(i=0;i<NetPayload->length;i++){
