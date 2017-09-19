@@ -79,22 +79,10 @@ int NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_
         payload.UseAck = 1;
         //payload.SoftRtransmitCount = 5;
         payload.TxAddress = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(AdjNode->nodeId)<<8) + (uint64_t)(NODE_PIPE_MASK+AdjNode->rxPipe);
-        
-        
-        
-        
         packetEncapsulate(&payload, NetPayload);
-        
-        //memcpy(payload.Data, NetPayload, 7);
-        //memcpy(&payload.Data[7], NetPayload->payload, NetPayload->length);
-        
-        
-        
-        
         payload.length = NetPayload->length + 7;
         
-        
-        
+
         return TransmitPayload(&payload);   
  
 
@@ -102,8 +90,13 @@ int NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_
 }
 
 void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
-    networkPayload_t *network_pld = (networkPayload_t*) payload->Data;
-
+    //networkPayload_t *network_pld = (networkPayload_t*) payload->Data;
+    
+    
+    networkPayload_t NetPayload;
+    packetDecapsulate(&NetPayload , payload);
+    
+    
 
     printf("DATA P%d, LENGTH %d: \r\n", payload->RxPipe, payload->RxDataLen);
     int i;
@@ -112,16 +105,16 @@ void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
         printf("%x\t", payload->Data[i]);  
     }
     printf("\r\n\r\n");
-    printf("source NodeID : %x\r\n", network_pld->srcNodeId);
-    printf("destination NodeID : %x\r\n", network_pld->destNodeId);
-    printf("PID : %x\r\n", network_pld->pid);
-    printf("Packet Info : %x\r\n", network_pld->packetInfo);
-    printf("Length : %x\r\n", network_pld->length);
+    printf("source NodeID : %x\r\n", NetPayload.srcNodeId);
+    printf("destination NodeID : %x\r\n", NetPayload.destNodeId);
+    printf("PID : %x\r\n", NetPayload.pid);
+    printf("Packet Info : %x\r\n", NetPayload.packetInfo);
+    printf("Length : %x\r\n", NetPayload.length);
     
-    printf("PID : %x\r\n", network_pld->pid);
+    printf("PID : %x\r\n", NetPayload.pid);
     routingTableUpdate(payload);
     
-    if(network_pld->destNodeId == ownNodeId){
+    if(NetPayload.destNodeId == ownNodeId){
         printf("packet destination matched own ID\r\n");
         sendAcknowledgement(payload);
     }
