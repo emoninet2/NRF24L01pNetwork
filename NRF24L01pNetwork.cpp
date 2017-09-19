@@ -285,11 +285,11 @@ void NRF24L01pNetwork::packetEncapsulate(Payload_t *payload, networkPayload_t *N
 }
 
 void NRF24L01pNetwork::packetDecapsulate(networkPayload_t *NetPayload , Payload_t *payload){
-    NetPayload->srcNodeId = ((payload->Data[1] << 8) | payload->Data[0])&0xFF ;
-    NetPayload->destNodeId = ((payload->Data[3] << 8) | payload->Data[2])&0xFF ;
-    NetPayload->pid = payload->Data[4] &0xFF;
-    NetPayload->packetInfo = payload->Data[5] &0xFF;
-    NetPayload->length = payload->Data[6] &0xFF;
+    NetPayload->srcNodeId = ((payload->Data[1] << 8) | payload->Data[0]) ;
+    NetPayload->destNodeId = ((payload->Data[3] << 8) | payload->Data[2]) ;
+    NetPayload->pid = payload->Data[4] ;
+    NetPayload->packetInfo = payload->Data[5] ;
+    NetPayload->length = payload->Data[6];
     
     int i;
     for(i=0;i<NetPayload->length;i++){
