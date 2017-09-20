@@ -80,21 +80,21 @@ NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::sendToAdjacent(networkP
         //payload.SoftRtransmitCount = 5;
         payload.TxAddress = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(AdjNode->nodeId)<<8) + (uint64_t)(NODE_PIPE_MASK+AdjNode->rxPipe);
         
-        printf("will send to : %#llx\r\n", payload.TxAddress);
+        //printf("will send to : %#llx\r\n", payload.TxAddress);
         
         packetEncapsulate(&payload, NetPayload);
         payload.length = NetPayload->length + 7;
         
 
         return (NetworkErrorStatus_t) TransmitPayload(&payload);   
- 
+        flush_tx();
 
 
 }
 
 NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
     //networkPayload_t *network_pld = (networkPayload_t*) payload->Data;
-    
+   
     
     networkPayload_t NetPayload;
     packetDecapsulate(&NetPayload , payload);
