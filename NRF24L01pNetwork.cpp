@@ -79,6 +79,9 @@ NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::sendToAdjacent(networkP
         payload.UseAck = 1;
         //payload.SoftRtransmitCount = 5;
         payload.TxAddress = ((uint64_t)ownNetworkId<<24) +( (uint64_t)(AdjNode->nodeId)<<8) + (uint64_t)(NODE_PIPE_MASK+AdjNode->rxPipe);
+        
+        printf("will send to : %#llx\r\n", payload.TxAddress);
+        
         packetEncapsulate(&payload, NetPayload);
         payload.length = NetPayload->length + 7;
         
@@ -255,14 +258,13 @@ NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::sendAcknowledgement(Pay
     networkPayload_t NetPayload;
     packetDecapsulate(&NetPayload, payload);
 
-    uint8_t NetData[25];
     if(NetPayload.packetCtrl&NRF24L01P_NETWORK_PACKETCTRL_REQACK_BM){
         debug_if(NetDebugEnabled, "\r\tSending Acknowledgement\r\n");
         networkPayload_t AckPayload;
         AckPayload.destNodeId = NetPayload.srcNodeId;
         AckPayload.srcNodeId = ownNodeId;
         AckPayload.pid = NetPayload.pid;
-        AckPayload.packetCtrl = (NetPayload.packetCtrl);
+        AckPayload.packetCtrl = (NetPayload.packetCtrl) & !NRF24L01P_NETWORK_PACKETCTRL_REQACK_BM;
         //memcpy(AckPayload.payload, NetData, 25);
         sprintf((char*) AckPayload.payload, "ACK");
         AckPayload.length = strlen("ACK");
