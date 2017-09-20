@@ -256,13 +256,13 @@ NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::sendAcknowledgement(Pay
     packetDecapsulate(&NetPayload, payload);
 
     uint8_t NetData[25];
-    if(NetPayload.packetCtrl&(1<<0)){
+    if(NetPayload.packetCtrl&NRF24L01P_NETWORK_PACKETCTRL_REQACK_BM){
         debug_if(NetDebugEnabled, "\r\tSending Acknowledgement\r\n");
         networkPayload_t AckPayload;
         AckPayload.destNodeId = NetPayload.srcNodeId;
         AckPayload.srcNodeId = ownNodeId;
         AckPayload.pid = NetPayload.pid;
-        AckPayload.packetCtrl = (NetPayload.packetCtrl)&0b11111110;
+        AckPayload.packetCtrl = (NetPayload.packetCtrl);
         //memcpy(AckPayload.payload, NetData, 25);
         sprintf((char*) AckPayload.payload, "ACK");
         AckPayload.length = strlen("ACK");
