@@ -29,11 +29,30 @@
 
 
 
+#define NRF24L01P_NETWORK_PACKETCTRL_REQACK_BP 0
+#define NRF24L01P_NETWORK_PACKETCTRL_REQACK_BM (1<<0)
+
+
 class NRF24L01pNetwork : public NRF24L01p{
 public:
     NRF24L01pNetwork();
     NRF24L01pNetwork(const NRF24L01pNetwork& orig);
     virtual ~NRF24L01pNetwork();
+    
+    
+    /**
+     * The enum containing the types of possible errors
+     */
+    typedef enum{
+        SUCCESS = 0, /**< succes operation */
+        ERROR = -1,  /**< failed operation */ 
+                
+    }NetworkErrorStatus_t;
+    
+    
+    
+    
+    
     
     /** the header of the network payload
      * The header is encapsulated in the payload data. See networkPayload_t 
@@ -54,7 +73,7 @@ public:
         uint16_t srcNodeId; /**< two byte node id of the source node*/
         uint16_t destNodeId;/**< two byte node id of the destination node*/
         uint8_t pid;        /**< the packet identification of the network payload*/
-        uint8_t packetInfo; /**< the other information of the packet*/
+        uint8_t packetCtrl; /**< the other information of the packet*/
         uint8_t length;     /**< the length of the data (maximum network payload data that can be sent is 25 bytes) */
         uint8_t payload[25];/**< tge 25 byte data that is left over to send over the 32 byte link layer payload of the radio */
     }networkPayload_t;
@@ -113,13 +132,18 @@ public:
      */
     unsigned int RoutingTableAddr;
     
+    /** 
+     * if set, debug is enabled. 
+     */
+    bool NetDebugEnabled;
+    
     
     /**initializes the network
      * this will initialize the network by defining its network and node id. If using DHCP, then this function is used by the DHC API layer.
      * @param networkId the 2 byte network id
      * @param nodeId the 2 byte node id
      */
-    void initNetwork(uint16_t networkId, uint16_t nodeId);
+    NetworkErrorStatus_t initNetwork(uint16_t networkId, uint16_t nodeId);
     
     /** function used to set another node as its adjacent node
      * this function uses the radios parallel pipe feature where each node assigns a dedicated pipe for an adjacent node.
@@ -127,26 +151,26 @@ public:
      * @param adjNodeId     the node id of the node to be set as adjacent
      * @param AdjNodeRxPipe the nodes own pipe into which the adjacent node will send data to
      */
-    void setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, pipe_t AdjNodeRxPipe);
+    NetworkErrorStatus_t setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, pipe_t AdjNodeRxPipe);
     /**remove an adjacent node
      * when an adjacent node is unresponsive, it can be removed using this function
      * @param AdjNodeRxPipe the pipe that has the unresponsive adjacent node egistered and needs to be removed
      */
-    void removeAdjacentNode(pipe_t AdjNodeRxPipe);
+    NetworkErrorStatus_t removeAdjacentNode(pipe_t AdjNodeRxPipe);
     /** send data to adjacent node
      * this function will send a network payload to and adjacent node
      * @param NetPayload the pointer to the network payload
      * @param AdjNode the pointer to the adjacent node to which the data needs to be sent 
      * @return error status, -1 means a fail and 0 means success
      */
-    int sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode);
+    NetworkErrorStatus_t sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode);
     
     /** process the received network payload
      * this function will check the packet received and determine if it needs to be forwarded or kept for itself
      * this function will also update the routing table
      * @param payload the hardware payload containing informations relevant, such as rx pipe, etc. 
      */
-    void processNetworkPayload(Payload_t *payload);
+    NetworkErrorStatus_t processNetworkPayload(Payload_t *payload);
     
     /** send data over the network
      * this function will send a data over the network. the routing table if aware of the upstream adjacent node will forward the data
@@ -155,26 +179,26 @@ public:
      * @param pointer to the NetPayload the network payload that needs to be sent
      * @return returns the error status. -1 for fail and 0 for success
      */
-    int sendToNetwork(networkPayload_t *NetPayload);
+    NetworkErrorStatus_t sendToNetwork(networkPayload_t *NetPayload);
     
     /**forward the packet 
      * this functon is used if the destination does not match this node's own node id
      * @param payload the payload (not network payload) is forwarded. No data has been modified. 
      * @return error status. -1 as fail and 0 as success
      */
-    int forwardPacket(Payload_t *payload);
+    NetworkErrorStatus_t forwardPacket(Payload_t *payload);
     
     /**update the routing table
      * the routing table will check if the payload contains any new information and update the routing table accordingly
      * @param payload the payload that the radio receives and has to be forwarded.
      */
-    void routingTableUpdate(Payload_t *payload);
+    NetworkErrorStatus_t routingTableUpdate(Payload_t *payload);
     
     /** sending an acknowledgement back
      * this acknowledgement packet is sent from the destination node back to the source node
      * @param payload the payload containing the acknowledgement 
      */
-    void sendAcknowledgement(Payload_t *payload);
+    NetworkErrorStatus_t sendAcknowledgement(Payload_t *payload);
 
     
     /**

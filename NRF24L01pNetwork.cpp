@@ -23,7 +23,7 @@ NRF24L01pNetwork::NRF24L01pNetwork(const NRF24L01pNetwork& orig) {
 NRF24L01pNetwork::~NRF24L01pNetwork() {
 }
 
-void NRF24L01pNetwork::initNetwork(uint16_t networkId, uint16_t nodeId){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::initNetwork(uint16_t networkId, uint16_t nodeId){
     RadioConfig.DataReadyInterruptEnabled = 1;
     RadioConfig.DataSentInterruptEnabled = 1;
     RadioConfig.MaxRetryInterruptEnabled = 1;
@@ -60,19 +60,19 @@ void NRF24L01pNetwork::initNetwork(uint16_t networkId, uint16_t nodeId){
     
     Initialize();
 }
-void NRF24L01pNetwork::setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, pipe_t AdjNodeRxPipe){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::setAdjacentNode(pipe_t AssignedPipe, uint16_t adjNodeId, pipe_t AdjNodeRxPipe){
     if((AssignedPipe>= PIPE_P1)&&(AssignedPipe <= PIPE_P5)){
         AdjNode[AssignedPipe-1].nodeId = adjNodeId;
         AdjNode[AssignedPipe-1].rxPipe = AdjNodeRxPipe;
         AdjNode[AssignedPipe-1].status = AdjacentNodeStatus_Connected;
     }
 }
-void NRF24L01pNetwork::removeAdjacentNode(pipe_t AssignedPipe){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::removeAdjacentNode(pipe_t AssignedPipe){
     if((AssignedPipe>= PIPE_P1)&&(AssignedPipe <= PIPE_P5)){
         AdjNode[AssignedPipe-1].status = AdjacentNodeStatus_Free;
     }
 }
-int NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_t *AdjNode){
     
         Payload_t payload;     
         uint8_t payloadData[32];
@@ -83,13 +83,13 @@ int NRF24L01pNetwork::sendToAdjacent(networkPayload_t *NetPayload, adjacentNode_
         payload.length = NetPayload->length + 7;
         
 
-        return TransmitPayload(&payload);   
+        return (NetworkErrorStatus_t) TransmitPayload(&payload);   
  
 
 
 }
 
-void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
     //networkPayload_t *network_pld = (networkPayload_t*) payload->Data;
     
     
@@ -97,53 +97,54 @@ void NRF24L01pNetwork::processNetworkPayload(Payload_t *payload){
     packetDecapsulate(&NetPayload , payload);
     
     
-
-    printf("DATA P%d, LENGTH %d: \r\n", payload->RxPipe, payload->length);
+    debug_if(NetDebugEnabled, "\r\n");
+    debug_if(NetDebugEnabled, "DATA P%d, LENGTH %d: \r\n", payload->RxPipe, payload->length);
     int i;
     for(i=0;i<32;i++){
-        if(i%8 == 0) printf("\r\n");
-        printf("%x\t", payload->Data[i]);  
+        if(i%8 == 0) debug_if(NetDebugEnabled, "\r\n");
+        debug_if(NetDebugEnabled, "%x\t", payload->Data[i]);  
     }
-    printf("\r\n\r\n");
-    printf("source NodeID : %x\r\n", NetPayload.srcNodeId);
-    printf("destination NodeID : %x\r\n", NetPayload.destNodeId);
-    printf("PID : %x\r\n", NetPayload.pid);
-    printf("Packet Info : %x\r\n", NetPayload.packetInfo);
-    printf("Length : %x\r\n", NetPayload.length);
-    
-    printf("PID : %x\r\n", NetPayload.pid);
+    debug_if(NetDebugEnabled, "\r\n\r\n");
+    debug_if(NetDebugEnabled, "source NodeID : %x\r\n", NetPayload.srcNodeId);
+    debug_if(NetDebugEnabled, "destination NodeID : %x\r\n", NetPayload.destNodeId);
+    debug_if(NetDebugEnabled, "PID : %x\r\n", NetPayload.pid);
+    debug_if(NetDebugEnabled, "Packet Info : %x\r\n", NetPayload.packetCtrl);
+    debug_if(NetDebugEnabled, "Length : %x\r\n", NetPayload.length);
+
     routingTableUpdate(payload);
     
     if(NetPayload.destNodeId == ownNodeId){
-        printf("packet destination matched own ID\r\n");
+        debug_if(NetDebugEnabled, "packet destination matched own ID\r\n");
         sendAcknowledgement(payload);
     }
     else{
-        printf("forwarding packet\r\n");
+        debug_if(NetDebugEnabled, "forwarding packet\r\n");
         forwardPacket(payload);
     }
+    
+    return SUCCESS;
 }
-int NRF24L01pNetwork::sendToNetwork(networkPayload_t *NetPayload){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::sendToNetwork(networkPayload_t *NetPayload){
     
     //checking in Destination node is adjacent
     int i;
     for(i=0;i<5;i++){
         if(NetPayload->destNodeId == AdjNode[i].nodeId){
-            printf("destination is adjacent node : %x\r\n",AdjNode[i].nodeId);
+            debug_if(NetDebugEnabled, "destination is adjacent node : %x\r\n",AdjNode[i].nodeId);
             return sendToAdjacent(NetPayload, &AdjNode[i]);
         }
     }
     
     //checking if destination node is on Routing Table
-    for(i=0;i<20;i++){
+    for(i=0;i<ROUTING_TABLE_SIZE;i++){
         if((NetPayload->destNodeId == RoutingTable[i].destNodeId)){
-            printf("destination found on routing table\r\n");
+            debug_if(NetDebugEnabled, "destination found on routing table\r\n");
             return sendToAdjacent(NetPayload, &RoutingTable[i].viaAdjNode);
         }
     }
     
     //forwarding to all adjacent nodes
-    printf("estination unknown, forwarding to all adjacent\r\n");
+    debug_if(NetDebugEnabled, "estination unknown, forwarding to all adjacent\r\n");
     for(i=0;i<5;i++){
         if(AdjNode[i].status != 0){
             return sendToAdjacent(NetPayload, &AdjNode[i]);
@@ -151,13 +152,15 @@ int NRF24L01pNetwork::sendToNetwork(networkPayload_t *NetPayload){
     }
 }
 
-int NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
     //networkPayload_t *NetPayload = (networkPayload_t*) Payload->data;
     //NetPayload->payload = &Payload->data[7];
     
     networkPayload_t NetPayload;
-    memcpy(&NetPayload, Payload->Data, 7);
-    memcpy(NetPayload.payload, Payload->Data, 25);
+    packetDecapsulate(&NetPayload , Payload);
+    
+    //memcpy(&NetPayload, Payload->Data, 7);
+    //memcpy(NetPayload.payload, Payload->Data, 25);
     //NetPayload.payload = &Payload->data[7];
     
 
@@ -170,21 +173,21 @@ int NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
     int i;
     for(i=0;i<5;i++){
         if((NetPayload.destNodeId == AdjNode[i].nodeId)&&(NetPayload.destNodeId != viaNode.nodeId)  ){
-            printf("destination is adjacent node : %x\r\n",AdjNode[i].nodeId);
+            debug_if(NetDebugEnabled, "destination is adjacent node : %x\r\n",AdjNode[i].nodeId);
             return sendToAdjacent(&NetPayload, &AdjNode[i]);
         }
     }
     
     //checking if destination node is on Routing Table
-    for(i=0;i<20;i++){
+    for(i=0;i<ROUTING_TABLE_SIZE;i++){
         if((NetPayload.destNodeId == RoutingTable[i].destNodeId)){
-            printf("destination found on routing table\r\n");
+            debug_if(NetDebugEnabled, "destination found on routing table\r\n");
             return sendToAdjacent(&NetPayload, &RoutingTable[i].viaAdjNode);
         }
     }
     
     //forwarding to all adjacent nodes
-    printf("destination unknown, forwarding to all adjacent\r\n");
+    debug_if(NetDebugEnabled, "destination unknown, forwarding to all adjacent\r\n");
     for(i=0;i<5;i++){
         if((AdjNode[i].status != 0)&&(AdjNode[i].nodeId != viaNode.nodeId)){
             return sendToAdjacent(&NetPayload, &AdjNode[i]);
@@ -199,7 +202,7 @@ int NRF24L01pNetwork::forwardPacket(Payload_t *Payload){
 }
 
 
-void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
     //printf("\r\tROUTING TABLE HANDLER\r\n");
     networkPayload_t *NetPayload = (networkPayload_t*) payload->Data;
     int i;
@@ -207,14 +210,14 @@ void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
     for(i=0;i<5;i++){
         if((NetPayload->srcNodeId == AdjNode[i].nodeId)  ){
             //printf("already Adjacent. Not storing\r\n");
-            return;
+            return SUCCESS;
         }
     }
 
-    for(i=0;i<20;i++){
+    for(i=0;i<ROUTING_TABLE_SIZE;i++){
         if((NetPayload->srcNodeId == RoutingTable[i].destNodeId)  ){
             //printf("already on routing table. Not storing\r\n");
-            return;
+            return SUCCESS;
         }
     }
     //printf("storing to routing table\r\n");
@@ -222,12 +225,12 @@ void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
     RoutingTable[RoutingTableAddr].viaAdjNode.nodeId = AdjNode[payload->RxPipe-1].nodeId;
     RoutingTable[RoutingTableAddr].viaAdjNode.rxPipe = AdjNode[payload->RxPipe-1].rxPipe;
     RoutingTableAddr++;
-    if(RoutingTableAddr>=20) RoutingTableAddr = 0;
+    if(RoutingTableAddr>=ROUTING_TABLE_SIZE) RoutingTableAddr = 0;
     
     //printf("New Routing table\r\n");
-    for(i=0;i<20;i++){
-        //printf("\t\t%x --> [%x:%d]\r\n",RoutingTable[i].NodeId,RoutingTable[i].FwrdAdjNode.NodeId,RoutingTable[i].FwrdAdjNode.RxPipe  );
-    }
+    //for(i=0;i<ROUTING_TABLE_SIZE;i++){
+        //debug_if(NetDebugEnabled, "\t\t%x --> [%x:%d]\r\n",RoutingTable[i].NodeId,RoutingTable[i].FwrdAdjNode.NodeId,RoutingTable[i].FwrdAdjNode.RxPipe  );
+    //}
     
 }
 
@@ -235,31 +238,30 @@ void NRF24L01pNetwork::routingTableUpdate(Payload_t *payload){
 
 void NRF24L01pNetwork::showAllAdjacentNodes(void){
     
-    
     for(int i=0;i<5;i++){
-        printf("Adjacent Node[%d]\t%#x\t%d\r\n", i,AdjNode[i].nodeId , AdjNode[i].status);
+        debug_if(NetDebugEnabled, "Adjacent Node[%d]\t%#x\t%d\r\n", i,AdjNode[i].nodeId , AdjNode[i].status);
     }
     
 }
 
-void NRF24L01pNetwork::sendAcknowledgement(Payload_t *payload){
+NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::sendAcknowledgement(Payload_t *payload){
     
     networkPayload_t *NetPayload = (networkPayload_t*) payload->Data;
     
     
     uint8_t NetData[25];
-    if(NetPayload->packetInfo&(1<<0)){
-        //printf("\r\tSENDING ACKNOWLEDGEMENT\r\n");
+    if(NetPayload->packetCtrl&(1<<0)){
+        debug_if(NetDebugEnabled, "\r\tSending Acknowledgement\r\n");
         networkPayload_t AckPayload;
         AckPayload.destNodeId = NetPayload->srcNodeId;
         AckPayload.srcNodeId = ownNodeId;
         AckPayload.pid = NetPayload->pid;
-        AckPayload.packetInfo = (NetPayload->packetInfo)&0b11111110;
-        memcpy(AckPayload.payload, NetData, 25);
+        AckPayload.packetCtrl = (NetPayload->packetCtrl)&0b11111110;
+        //memcpy(AckPayload.payload, NetData, 25);
         sprintf((char*) AckPayload.payload, "ACK");
 
         sendToNetwork(&AckPayload);
-        printf("ACK sent\r\n");
+        debug_if(NetDebugEnabled, "ACK sent\r\n");
     }
 
 }
@@ -272,7 +274,7 @@ void NRF24L01pNetwork::packetEncapsulate(Payload_t *payload, networkPayload_t *N
     payload->Data[2] = NetPayload->destNodeId;
     payload->Data[3] = NetPayload->destNodeId>>8;
     payload->Data[4] = NetPayload->pid;
-    payload->Data[5] = NetPayload->packetInfo;
+    payload->Data[5] = NetPayload->packetCtrl;
     payload->Data[6] = NetPayload->length;
     
     
@@ -288,7 +290,7 @@ void NRF24L01pNetwork::packetDecapsulate(networkPayload_t *NetPayload , Payload_
     NetPayload->srcNodeId = ((payload->Data[1] << 8) | payload->Data[0]) ;
     NetPayload->destNodeId = ((payload->Data[3] << 8) | payload->Data[2]) ;
     NetPayload->pid = payload->Data[4] ;
-    NetPayload->packetInfo = payload->Data[5] ;
+    NetPayload->packetCtrl = payload->Data[5] ;
     NetPayload->length = payload->Data[6];
     
     int i;
@@ -311,7 +313,7 @@ void NRF24L01pNetwork::enableBroadcast(bool sel){
     set_RX_pipe_address((pipe_t) 0,NRF24L01P_NETWORK_BROADCAST_ADDR);
 }
 int NRF24L01pNetwork::processBroadcastPacket(Payload_t *payload){
-    printf("\r\ngot broadcast packet\r\n");
+    debug_if(NetDebugEnabled, "\r\ngot broadcast packet\r\n");
     BroadcastMessage_t *message = (BroadcastMessage_t*)payload;
     
     //printf("\r\n");
