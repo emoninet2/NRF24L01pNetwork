@@ -255,9 +255,6 @@ NRF24L01pNetwork::NetworkErrorStatus_t NRF24L01pNetwork::sendAcknowledgement(Pay
     networkPayload_t NetPayload;
     packetDecapsulate(&NetPayload, payload);
 
-
-
-    printf("wallahi %#x\r\n", NetPayload.packetCtrl);
     uint8_t NetData[25];
     if(NetPayload.packetCtrl&(1<<0)){
         debug_if(NetDebugEnabled, "\r\tSending Acknowledgement\r\n");
